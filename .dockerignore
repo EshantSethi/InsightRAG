@@ -1,0 +1,9 @@
+# Keep the build context small and reproducible: never ship build output, IDE files, or local results.
+target/
+eval/results/
+.git/
+.github/
+.idea/
+*.iml
+*.log
+.env

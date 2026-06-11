@@ -1,0 +1,22 @@
+# Build output
+target/
+*.class
+
+# IDE / editor
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS / logs
+.DS_Store
+*.log
+
+# Local secrets
+.env
+
+# Eval runs: keep the latest report as committed evidence for the README, ignore timestamped runs.
+eval/results/eval-*.json
+!eval/results/eval-latest.json

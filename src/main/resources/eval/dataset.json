@@ -1,0 +1,202 @@
+[
+  {
+    "id": "q01",
+    "question": "What port does Nimbus listen on by default?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-getting-started.md"],
+    "expectedKeywords": ["842"],
+    "note": "default embedded server port"
+  },
+  {
+    "id": "q02",
+    "question": "What Java version does Nimbus require?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-getting-started.md"],
+    "expectedKeywords": ["17"],
+    "note": "minimum supported Java version"
+  },
+  {
+    "id": "q03",
+    "question": "What syntax do path variables use in Nimbus routes?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-routing.md"],
+    "expectedKeywords": ["{name}"],
+    "note": "path variable placeholder syntax"
+  },
+  {
+    "id": "q04",
+    "question": "Are query parameters required or optional by default in Nimbus?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-routing.md"],
+    "expectedKeywords": ["optional"],
+    "note": "default optionality of query params"
+  },
+  {
+    "id": "q05",
+    "question": "How do you mark a query parameter as required in Nimbus?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-routing.md"],
+    "expectedKeywords": ["required"],
+    "note": "forcing a required query param"
+  },
+  {
+    "id": "q06",
+    "question": "What is the default dependency injection style in Nimbus?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-dependency-injection.md"],
+    "expectedKeywords": ["constructor"],
+    "note": "default injection mechanism"
+  },
+  {
+    "id": "q07",
+    "question": "What is the default component scope in Nimbus?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-dependency-injection.md"],
+    "expectedKeywords": ["singleton"],
+    "note": "default bean scope"
+  },
+  {
+    "id": "q08",
+    "question": "What is the default connection pool size in Nimbus?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-data-access.md"],
+    "expectedKeywords": ["10"],
+    "note": "default datasource pool size"
+  },
+  {
+    "id": "q09",
+    "question": "What is the default connection acquisition timeout in Nimbus?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-data-access.md"],
+    "expectedKeywords": ["30"],
+    "note": "pool acquisition timeout in seconds"
+  },
+  {
+    "id": "q10",
+    "question": "What is the default transaction propagation in Nimbus?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-data-access.md"],
+    "expectedKeywords": ["REQUIRED"],
+    "note": "default @Transactional propagation"
+  },
+  {
+    "id": "q11",
+    "question": "What is the default transaction isolation level in Nimbus?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-data-access.md"],
+    "expectedKeywords": ["READ_COMMITTED"],
+    "note": "default isolation level"
+  },
+  {
+    "id": "q12",
+    "question": "What batch size does saveAll use by default in Nimbus?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-data-access.md"],
+    "expectedKeywords": ["500"],
+    "note": "default bulk insert batch size"
+  },
+  {
+    "id": "q13",
+    "question": "What file does Nimbus load configuration from by default?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-configuration.md"],
+    "expectedKeywords": ["nimbus.yaml"],
+    "note": "default config file name"
+  },
+  {
+    "id": "q14",
+    "question": "Which environment variable activates a Nimbus profile?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-configuration.md"],
+    "expectedKeywords": ["NIMBUS_PROFILE"],
+    "note": "profile activation env var"
+  },
+  {
+    "id": "q15",
+    "question": "What is the configuration property precedence order in Nimbus?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-configuration.md"],
+    "expectedKeywords": ["precedence"],
+    "note": "command-line > env > file > defaults"
+  },
+  {
+    "id": "q16",
+    "question": "What is the default cache time-to-live in Nimbus?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-caching.md"],
+    "expectedKeywords": ["300"],
+    "note": "default cache TTL in seconds"
+  },
+  {
+    "id": "q17",
+    "question": "What eviction policy does the Nimbus cache use when it is full?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-caching.md"],
+    "expectedKeywords": ["LRU"],
+    "note": "cache eviction policy"
+  },
+  {
+    "id": "q18",
+    "question": "How do you override the TTL for a specific Nimbus cache?",
+    "type": "IN_CORPUS",
+    "expectedSources": ["nimbus-caching.md"],
+    "expectedKeywords": ["ttl-seconds"],
+    "note": "per-cache TTL override property"
+  },
+  {
+    "id": "q19",
+    "question": "How do I configure Nimbus to send emails over SMTP?",
+    "type": "OUT_OF_CORPUS",
+    "expectedSources": [],
+    "expectedKeywords": [],
+    "note": "adversarial: no email/SMTP feature exists in the docs"
+  },
+  {
+    "id": "q20",
+    "question": "What is the default GraphQL endpoint path in Nimbus?",
+    "type": "OUT_OF_CORPUS",
+    "expectedSources": [],
+    "expectedKeywords": [],
+    "note": "adversarial: no GraphQL support documented"
+  },
+  {
+    "id": "q21",
+    "question": "How does Nimbus integrate with Kubernetes service discovery?",
+    "type": "OUT_OF_CORPUS",
+    "expectedSources": [],
+    "expectedKeywords": [],
+    "note": "adversarial: no Kubernetes integration documented"
+  },
+  {
+    "id": "q22",
+    "question": "How much does a Nimbus enterprise license cost?",
+    "type": "OUT_OF_CORPUS",
+    "expectedSources": [],
+    "expectedKeywords": [],
+    "note": "adversarial: pricing is not in the technical docs"
+  },
+  {
+    "id": "q23",
+    "question": "How do I enable WebSocket support in Nimbus?",
+    "type": "OUT_OF_CORPUS",
+    "expectedSources": [],
+    "expectedKeywords": [],
+    "note": "adversarial: WebSockets not covered"
+  },
+  {
+    "id": "q24",
+    "question": "Which machine learning models does Nimbus ship with?",
+    "type": "OUT_OF_CORPUS",
+    "expectedSources": [],
+    "expectedKeywords": [],
+    "note": "adversarial: no ML feature exists"
+  },
+  {
+    "id": "q25",
+    "question": "What is the default rate limit Nimbus applies to incoming requests?",
+    "type": "OUT_OF_CORPUS",
+    "expectedSources": [],
+    "expectedKeywords": [],
+    "note": "adversarial: no rate-limiting documented (plausible but absent)"
+  }
+]
