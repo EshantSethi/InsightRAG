@@ -207,8 +207,15 @@ mvn verify                     # 33 JUnit tests + packaged jar
 
 ### Docker (app + pgvector)
 ```bash
-docker compose up --build      # app on :8080, pgvector-backed vector store
+docker build -t insightrag:latest .   # standalone image (in-memory store, mock LLM)
+docker compose up --build             # full stack: app on :8080 + pgvector-backed vector store
+docker compose down -v                # stop and remove the pgvector volume
 ```
+
+> **Verified on Docker:** both the standalone image (default in-memory profile) and the full
+> `docker compose` stack (app + pgvector Postgres) have been run end-to-end — startup ingestion,
+> documentation Q&A through pgvector vector search, runtime `/ingest` re-indexing, and abstention all
+> work, with the 36 embeddings confirmed persisted in Postgres.
 
 ---
 
