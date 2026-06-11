@@ -13,6 +13,12 @@ import java.util.List;
  *                   This is the honest "did we actually find anything relevant?" signal the abstention
  *                   gate keys off — the final chunks' scores are post-rerank blends and run high even
  *                   for off-topic queries, so they can't be trusted for that decision.
+ * @param lexicalConfidence the IDF-weighted keyword coverage of the best-matching chunk ([0,1]); a
+ *                   phrasing-independent in-scope signal that complements {@code confidence}. The
+ *                   abstention gate refuses only when <em>both</em> signals are weak, so an answerable
+ *                   question still answers even when it doesn't name the framework (which would
+ *                   otherwise drag the cosine confidence below threshold).
  */
-public record RetrievalResult(List<RetrievedChunk> chunks, QueryTrace trace, double confidence) {
+public record RetrievalResult(List<RetrievedChunk> chunks, QueryTrace trace, double confidence,
+                              double lexicalConfidence) {
 }

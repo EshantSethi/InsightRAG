@@ -26,7 +26,8 @@ public record AskResponse(
     }
 
     /** Serializable view of a {@link QueryTrace}. */
-    public record Trace(String strategy, double confidence, long totalMillis, List<Stage> stages) {
+    public record Trace(String strategy, double confidence, double lexicalConfidence, long totalMillis,
+                        List<Stage> stages) {
     }
 
     public record Stage(String name, int candidateCount, long elapsedMillis, String note) {
@@ -46,6 +47,7 @@ public record AskResponse(
         List<Stage> stages = trace.stages().stream()
                 .map(s -> new Stage(s.name(), s.candidateCount(), s.elapsedMillis(), s.note()))
                 .toList();
-        return new Trace(trace.strategy().name(), trace.confidence(), trace.totalMillis(), stages);
+        return new Trace(trace.strategy().name(), trace.confidence(), trace.lexicalConfidence(),
+                trace.totalMillis(), stages);
     }
 }

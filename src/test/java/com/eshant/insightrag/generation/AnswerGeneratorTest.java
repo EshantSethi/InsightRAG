@@ -29,8 +29,10 @@ class AnswerGeneratorTest {
         @Override public boolean isMock() { return false; }
     }
 
-    private static RetrievalResult retrieval(double confidence, List<RetrievedChunk> chunks) {
-        return new RetrievalResult(chunks, new QueryTrace("q", RetrievalStrategy.HYBRID_RERANK), confidence);
+    private static RetrievalResult retrieval(double confidence, double lexicalConfidence,
+                                             List<RetrievedChunk> chunks) {
+        return new RetrievalResult(chunks, new QueryTrace("q", RetrievalStrategy.HYBRID_RERANK),
+                confidence, lexicalConfidence);
     }
 
     private static List<RetrievedChunk> portContext() {
@@ -47,7 +49,7 @@ class AnswerGeneratorTest {
     @Test
     void improvedAnswersWhenConfidentAndGrounded() {
         Answer a = improved("The server listens on port 842 [1]")
-                .generate("What port does the server use?", retrieval(0.90, portContext()));
+                .generate("What port does the server use?", retrieval(0.90, 0.0, portContext()));
 
         assertThat(a.abstained()).isFalse();
         assertThat(a.text()).contains("842");
@@ -55,11 +57,22 @@ class AnswerGeneratorTest {
     }
 
     @Test
-    void improvedAbstainsWhenConfidenceBelowGate() {
-        // Good chunks and a grounded answer available, but confidence (0.50) is below the 0.815 gate,
-        // so the pre-generation gate must refuse before the LLM is even consulted.
+    void improvedAnswersWhenLexicallyConfidentEvenIfCosineBelowGate() {
+        // Cosine confidence (0.50) is below the gate, but strong keyword coverage (0.80) shows the
+        // answer is in scope — the gate must NOT refuse. This is the over-cautiousness fix.
         Answer a = improved("The server listens on port 842 [1]")
-                .generate("What port does the server use?", retrieval(0.50, portContext()));
+                .generate("default port", retrieval(0.50, 0.80, portContext()));
+
+        assertThat(a.abstained()).isFalse();
+        assertThat(a.text()).contains("842");
+    }
+
+    @Test
+    void improvedAbstainsWhenConfidenceBelowGate() {
+        // Good chunks and a grounded answer available, but BOTH signals are weak (cosine 0.50, lexical
+        // 0.10), so the pre-generation gate must refuse before the LLM is even consulted.
+        Answer a = improved("The server listens on port 842 [1]")
+                .generate("What port does the server use?", retrieval(0.50, 0.10, portContext()));
 
         assertThat(a.abstained()).isTrue();
         assertThat(a.text()).isEqualTo(PromptBuilder.ABSTAIN_ANSWER);
@@ -67,7 +80,7 @@ class AnswerGeneratorTest {
 
     @Test
     void improvedAbstainsOnEmptyRetrieval() {
-        Answer a = improved("anything").generate("q", retrieval(0.0, List.of()));
+        Answer a = improved("anything").generate("q", retrieval(0.0, 0.0, List.of()));
 
         assertThat(a.abstained()).isTrue();
     }
@@ -77,7 +90,7 @@ class AnswerGeneratorTest {
         // Confident retrieval passes the pre-gate, but the LLM's answer isn't supported by context,
         // so the post-generation grounding gate discards it.
         Answer a = improved("Bananas grow in tropical rainforests worldwide")
-                .generate("What port does the server use?", retrieval(0.90, portContext()));
+                .generate("What port does the server use?", retrieval(0.90, 0.0, portContext()));
 
         assertThat(a.abstained()).isTrue();
     }
@@ -88,7 +101,7 @@ class AnswerGeneratorTest {
                 new FixedLlm("The server listens on port 842 [1]"),
                 new GroundingChecker(), GenerationSettings.naive());
 
-        Answer a = naive.generate("What port does the server use?", retrieval(0.20, portContext()));
+        Answer a = naive.generate("What port does the server use?", retrieval(0.20, 0.0, portContext()));
 
         assertThat(a.abstained()).isFalse();
         assertThat(a.citations()).containsExactly("c.md");

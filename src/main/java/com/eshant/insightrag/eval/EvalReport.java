@@ -56,7 +56,8 @@ public record EvalReport(
      * @param type             IN_CORPUS / OUT_OF_CORPUS
      * @param abstained        whether the system refused
      * @param outcome          the four-way abstention classification
-     * @param confidence       retrieval confidence (max raw cosine, pre-rerank) — what the gate keys off
+     * @param confidence       vector retrieval confidence (max raw cosine, pre-rerank)
+     * @param lexicalConfidence IDF-weighted keyword coverage — the second abstention-gate signal
      * @param groundingScore   rule-based faithfulness of the produced answer
      * @param answerRelevance  expected-keyword coverage
      * @param llmJudge         LLM-judge faithfulness, or NaN
@@ -69,6 +70,7 @@ public record EvalReport(
             boolean abstained,
             String outcome,
             double confidence,
+            double lexicalConfidence,
             double groundingScore,
             double answerRelevance,
             double llmJudge,

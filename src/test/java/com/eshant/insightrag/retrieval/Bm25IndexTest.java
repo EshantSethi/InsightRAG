@@ -50,6 +50,25 @@ class Bm25IndexTest {
     }
 
     @Test
+    void lexicalConfidenceIsHighForInScopeAndLowForOutOfScope() {
+        Bm25Index index = indexed();
+
+        // All distinctive terms ("connection", "pool", "size") are in the corpus -> high coverage.
+        double inScope = index.lexicalConfidence("connection pool size");
+        // The distinctive term ("kubernetes") is absent from the corpus -> low coverage.
+        double outOfScope = index.lexicalConfidence("kubernetes service discovery");
+
+        assertThat(inScope).isGreaterThan(0.5);
+        assertThat(outOfScope).isLessThan(0.5);
+        assertThat(inScope).isGreaterThan(outOfScope);
+    }
+
+    @Test
+    void lexicalConfidenceIsZeroForEmptyIndex() {
+        assertThat(new Bm25Index().lexicalConfidence("anything")).isZero();
+    }
+
+    @Test
     void resetClearsTheIndex() {
         Bm25Index index = indexed();
         index.reset();

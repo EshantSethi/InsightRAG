@@ -57,7 +57,7 @@ public class RetrievalService {
             case NAIVE -> retrieveNaive(query, trace);
             case HYBRID_RERANK -> retrieveHybrid(query, trace);
         };
-        return new RetrievalResult(results, trace, trace.confidence());
+        return new RetrievalResult(results, trace, trace.confidence(), trace.lexicalConfidence());
     }
 
     /**
@@ -76,6 +76,7 @@ public class RetrievalService {
         trace.addStage("vector", vectorHits.size(), System.currentTimeMillis() - start,
                 "topK=" + topK + " minScore=" + minScore);
         trace.setConfidence(topCosine(vectorHits));
+        trace.setLexicalConfidence(keywordIndex.lexicalConfidence(query));
         return vectorHits;
     }
 
@@ -90,6 +91,7 @@ public class RetrievalService {
                 "candidateK=" + candidateK);
         // Capture confidence from the RAW cosine candidates, before RRF/rerank rescore everything.
         trace.setConfidence(topCosine(vectorHits));
+        trace.setLexicalConfidence(keywordIndex.lexicalConfidence(query));
 
         long t1 = System.currentTimeMillis();
         List<RetrievedChunk> keywordHits = keywordIndex.search(query, candidateK);

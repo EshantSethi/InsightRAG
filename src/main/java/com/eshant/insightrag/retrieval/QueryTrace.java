@@ -24,6 +24,7 @@ public class QueryTrace {
     private final RetrievalStrategy strategy;
     private final List<Stage> stages = new ArrayList<>();
     private double confidence;
+    private double lexicalConfidence;
 
     public QueryTrace(String query, RetrievalStrategy strategy) {
         this.query = query;
@@ -43,6 +44,16 @@ public class QueryTrace {
     /** The retrieval confidence for this query — see {@link RetrievalResult#confidence()}. */
     public double confidence() {
         return confidence;
+    }
+
+    /** Records the lexical (keyword) confidence that also fed the abstention gate. */
+    public void setLexicalConfidence(double lexicalConfidence) {
+        this.lexicalConfidence = lexicalConfidence;
+    }
+
+    /** The lexical confidence for this query — see {@link RetrievalResult#lexicalConfidence()}. */
+    public double lexicalConfidence() {
+        return lexicalConfidence;
     }
 
     public String query() {
@@ -75,7 +86,7 @@ public class QueryTrace {
             sb.append('\n');
         }
         sb.append("  total: ").append(totalMillis()).append("ms");
-        sb.append(String.format("  (confidence=%.3f)", confidence));
+        sb.append(String.format("  (confidence=%.3f lexical=%.3f)", confidence, lexicalConfidence));
         return sb.toString();
     }
 }

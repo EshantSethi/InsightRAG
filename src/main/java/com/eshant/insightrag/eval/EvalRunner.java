@@ -181,8 +181,8 @@ public class EvalRunner implements CommandLineRunner {
             }
 
             results.add(new EvalReport.CaseResult(c.id(), c.type().name(), answer.abstained(),
-                    outcome.name(), retrieval.confidence(), answer.groundingScore(), rel, judgeScore,
-                    retrievedSources, answer.text()));
+                    outcome.name(), retrieval.confidence(), retrieval.lexicalConfidence(),
+                    answer.groundingScore(), rel, judgeScore, retrievedSources, answer.text()));
         }
 
         double abstentionAccuracy = (double) (correctAnswers + correctAbstentions) / cases.size();

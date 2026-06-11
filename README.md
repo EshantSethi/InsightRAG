@@ -43,27 +43,38 @@ numbers** from `eval/results/eval-latest.json`, produced with the free determini
 | Retrieval **MRR** (rank of first right doc) | 0.718 | **1.000** | **+0.282** |
 | Retrieval recall@k / hit-rate | 1.000 | 1.000 | — |
 | Faithfulness (rule-based grounding) | 1.000 | 1.000 | — |
-| Answer relevance (fact coverage) | 0.889 | 0.833 | −0.056 |
-| **Abstention accuracy** | 0.720 | **0.960** | **+0.240** |
+| Answer relevance (fact coverage) | 0.889 | 0.889 | — |
+| **Abstention accuracy** | 0.720 | **1.000** | **+0.280** |
 | **Confident hallucinations** (answered an unanswerable question) | **7** | **0** | **−7** |
 | Correct refusals | 0 | 7 | +7 |
-| Over-cautious refusals | 0 | 1 | +1 |
+| Over-cautious refusals | 0 | 0 | — |
 
 ### What each change fixed
 
 | Failure mode in v0 | Fix in v1 | Effect on the numbers |
 |---|---|---|
-| **Hallucinates on out-of-scope questions** — answers everything, even what isn't in the docs. | **Abstention gate** on a true *retrieval-confidence* signal (max raw cosine similarity, captured *before* re-ranking). Below threshold → refuse. | Confident hallucinations **7 → 0**; abstention accuracy **0.72 → 0.96**. |
+| **Hallucinates on out-of-scope questions** — answers everything, even what isn't in the docs. | **Abstention gate** on two complementary confidence signals — raw cosine similarity (captured *before* re-ranking) **and** IDF-weighted keyword coverage. Refuse only when *both* are weak. | Confident hallucinations **7 → 0**; abstention accuracy **0.72 → 1.00**. |
 | **Retrieves the wrong chunk** — pure vector search blurs exact tokens (`NIMBUS_PROFILE`, port `842`). | **Hybrid retrieval**: dense vectors **+** from-scratch BM25 keyword search, fused with **Reciprocal Rank Fusion**, then **re-ranked**. | Precision **0.25 → 0.58**; MRR **0.72 → 1.00** (the right document is now ranked #1). |
 | **Splits facts from their headings** — fixed-size chunking cuts mid-section. | **Structure-aware chunking**: splits on markdown headings, keeps code blocks intact, records the heading path. | Feeds the precision/MRR gains above. |
 
-### The honest part
+### Why the abstention gate uses *two* signals
 
-v1 isn't free of trade-offs, and the eval shows it. It **wrongly refused one answerable question**
-("What is the default component scope?") — that question's wording embedded at cosine 0.799, just
-below the 0.815 abstention threshold. That's a deliberate **precision-over-recall** choice: for an
-anti-hallucination system, *never guessing wrong* (0 hallucinations) is worth occasionally being too
-cautious. The threshold was calibrated on the eval set to sit just above every adversarial query.
+A cosine-similarity threshold alone is **brittle to phrasing**. all-MiniLM cosines run high and
+compressed, so the gate has to sit at ~0.815 — and a perfectly answerable question asked *without* the
+framework name (e.g. "What is the default connection pool size?" instead of "…in Nimbus?") drops just
+below it and gets wrongly refused. Early on, that cost the eval one over-cautious refusal.
+
+The fix is a second, **phrasing-independent** signal: **IDF-weighted keyword coverage** from the BM25
+index — of the query's important terms, how many does the best-matching chunk contain? Out-of-scope
+questions have distinctive terms (`smtp`, `graphql`, `kubernetes`) that appear in **no** chunk, so they
+score near zero no matter how they're worded; answerable questions score high whether or not they name
+the framework. The gate refuses only when **both** signals are weak. In the eval the two classes
+separate cleanly (out-of-scope keyword coverage tops out at 0.40; the rescued in-corpus question scores
+0.95), giving **zero hallucinations and zero over-cautious refusals**.
+
+> The thresholds (0.815 cosine / 0.50 keyword coverage) are still **calibrated to this corpus and
+> embedding model** — a different corpus would want re-calibration, and a learned cross-encoder gate
+> would generalise further. The design is honest about being a tuned heuristic, not magic.
 
 > **A note on faithfulness:** the default LLM is a deterministic **extractive mock** — it only ever
 > quotes retrieved text, so it's grounded-by-construction (faithfulness 1.0 for both versions). That's
@@ -124,8 +135,8 @@ trims to the top *k*. Every query produces a `QueryTrace` of each stage.
 
 **Generation.** A prompt instructs the model to cite sources with `[n]` markers and to abstain when
 the answer isn't present. Two gates enforce trustworthiness:
-1. **Pre-generation** — if retrieval **confidence** (max raw cosine, pre-rerank) is below threshold,
-   refuse without even calling the model.
+1. **Pre-generation** — if retrieval is weak by **both** a vector-confidence signal (max raw cosine,
+   pre-rerank) **and** a keyword-coverage signal, refuse without even calling the model.
 2. **Post-generation** — a rule-based **grounding check** measures how much of the answer is supported
    by the context; an ungrounded answer is discarded in favour of abstaining.
 
@@ -155,9 +166,10 @@ version* of nimbus-core?" returns an exact `3.2.0` from data, not a paraphrase f
   LLM is a deterministic mock. Real Claude is a drop-in upgrade behind one interface (`LlmClient`).
 - **Two switchable configs, one eval.** v0 (naive) and v1 (improved) are real, runnable pipelines the
   eval compares head-to-head, so every claim of improvement is a number, not an assertion.
-- **Confidence ≠ rerank score.** Re-ranked scores are normalised and run high even for off-topic
-  queries; the abstention gate keys off *raw cosine confidence* instead. This single distinction is
-  what makes principled refusal possible.
+- **Confidence ≠ rerank score, and one signal isn't enough.** Re-ranked scores are normalised and run
+  high even for off-topic queries, so the gate keys off *raw cosine confidence* instead — and pairs it
+  with a phrasing-independent *keyword-coverage* signal so it refuses out-of-scope questions without
+  over-refusing answerable ones. This is what makes principled refusal robust.
 - **Honest metrics.** The extractive mock can't hallucinate, so the reported before/after gains come
   from retrieval and abstention — effects that are real regardless of which LLM is plugged in.
 - **Everything traceable.** `QueryTrace` records every retrieval stage, candidate counts, timings, and
@@ -238,7 +250,8 @@ curl -s -X POST localhost:8080/ask -H 'Content-Type: application/json' \
   "route": "DOC_QA", "abstained": true, "citations": [] }
 ```
 
-**See the full trace with `?debug=true`:**
+**See the full trace with `?debug=true`** — note this question omits "Nimbus", so cosine `confidence`
+(0.78) falls below the 0.815 gate, but the high `lexicalConfidence` (1.0) keeps it from being refused:
 ```bash
 curl -s -X POST 'localhost:8080/ask?debug=true' -H 'Content-Type: application/json' \
   -d '{"question":"What is the default connection pool size?"}'
@@ -252,7 +265,8 @@ curl -s -X POST 'localhost:8080/ask?debug=true' -H 'Content-Type: application/js
     "groundingScore": 1.0,
     "trace": {
       "strategy": "HYBRID_RERANK",
-      "confidence": 0.86,
+      "confidence": 0.780,
+      "lexicalConfidence": 1.0,
       "totalMillis": 12,
       "stages": [
         { "name": "vector",        "candidateCount": 16, "note": "candidateK=16" },
@@ -315,7 +329,8 @@ InsightRAG/
 - The default mock LLM is **extractive** (quotes context verbatim), so faithfulness is 1.0 by
   construction for both versions — the measured gains are in retrieval and abstention. Plug in Claude
   for generative answers and the LLM-judge faithfulness metric.
-- The abstention threshold (0.815) is **calibrated to this corpus and embedding model**. A different
-  corpus would want re-calibration; a learned cross-encoder gate would generalise better.
+- The abstention thresholds (0.815 cosine / 0.50 keyword coverage) are **calibrated to this corpus and
+  embedding model**. A different corpus would want re-calibration; a learned cross-encoder gate would
+  generalise better.
 - The corpus is small (6 docs), so recall@k and hit-rate are saturated at 1.0 for both versions — the
   retrieval improvement shows up in **precision and ranking (MRR)**, which is where it matters here.

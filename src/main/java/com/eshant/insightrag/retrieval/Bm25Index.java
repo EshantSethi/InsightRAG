@@ -5,8 +5,10 @@ import com.eshant.insightrag.ingestion.Chunk;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -30,6 +32,19 @@ public class Bm25Index {
 
     /** Split on anything that isn't a letter, digit, or underscore — keeps tokens like NIMBUS_PROFILE whole. */
     private static final Pattern TOKEN = Pattern.compile("[^\\p{Alnum}_]+");
+
+    /**
+     * Question/function words stripped before computing {@link #lexicalConfidence(String)} — they carry
+     * no topical signal and (being absent from a technical corpus) would otherwise get a large IDF and
+     * distort the score. Deliberately excludes content words.
+     */
+    private static final Set<String> STOPWORDS = Set.of(
+            "the", "a", "an", "and", "or", "but", "is", "are", "was", "were", "be", "been", "being",
+            "to", "of", "in", "on", "at", "by", "for", "with", "as", "from", "that", "this", "these",
+            "those", "it", "its", "you", "your", "i", "me", "my", "we", "our", "can", "do", "does",
+            "did", "if", "not", "will", "would", "should", "shall", "may", "might", "must", "have",
+            "has", "had", "they", "them", "their", "there", "what", "which", "when", "where", "how",
+            "who", "whom", "why", "into", "about", "over", "than", "then", "so", "such");
 
     /** The indexed chunks, parallel to {@link #docTokenCounts} and {@link #docLengths}. */
     private final List<Chunk> chunks = new ArrayList<>();
@@ -95,6 +110,50 @@ public class Bm25Index {
             top.add(scored.get(rank).reStaged(RetrievedChunk.Origin.KEYWORD, rank));
         }
         return top;
+    }
+
+    /**
+     * IDF-weighted lexical confidence in [0,1]: of the query's informative-term "importance mass"
+     * (Σ IDF over non-stopword terms), how much is covered by the single best-matching chunk?
+     *
+     * <p>This is a phrasing-independent "is this even in scope?" signal that complements the vector
+     * confidence. Query terms absent from the corpus (e.g. {@code smtp}, {@code graphql}) carry a large
+     * IDF and can never be matched, so a question whose distinctive terms aren't in the documentation
+     * scores near 0 — even if it shares generic words like "default" or the framework name. Conversely
+     * an answerable question scores high whether or not it names the framework, which fixes the
+     * over-cautious refusals a vector-only gate produces.
+     */
+    public double lexicalConfidence(String query) {
+        if (chunks.isEmpty()) {
+            return 0.0;
+        }
+        List<String> terms = new ArrayList<>(new LinkedHashSet<>(tokenize(query)));
+        terms.removeIf(STOPWORDS::contains);
+        if (terms.isEmpty()) {
+            return 0.0;
+        }
+        int totalDocs = chunks.size();
+        Map<String, Double> termIdf = new HashMap<>();
+        double totalIdf = 0.0;
+        for (String term : terms) {
+            double idf = idf(documentFrequency.getOrDefault(term, 0), totalDocs);
+            termIdf.put(term, idf);
+            totalIdf += idf;
+        }
+        if (totalIdf <= 0.0) {
+            return 0.0;
+        }
+        double best = 0.0;
+        for (Map<String, Integer> counts : docTokenCounts) {
+            double matched = 0.0;
+            for (String term : terms) {
+                if (counts.containsKey(term)) {
+                    matched += termIdf.get(term);
+                }
+            }
+            best = Math.max(best, matched);
+        }
+        return Math.min(1.0, best / totalIdf);
     }
 
     /** Sums BM25 contributions of each query term for document {@code docIndex}. */

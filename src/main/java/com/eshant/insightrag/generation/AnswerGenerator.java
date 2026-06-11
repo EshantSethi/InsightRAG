@@ -44,12 +44,14 @@ public class AnswerGenerator {
     public Answer generate(String question, RetrievalResult retrieval) {
         List<RetrievedChunk> context = retrieval.chunks();
 
-        // Gate 1: pre-generation — refuse on empty or low-confidence retrieval. We test the retrieval
-        // CONFIDENCE (max raw cosine, pre-rerank) rather than the top chunk's score: after re-ranking the
-        // top score is a normalized blend that runs high even for off-topic queries, so it can't tell us
-        // whether we actually found anything. The raw cosine can — this is what lets v1 abstain on
-        // adversarial out-of-corpus questions while v0 (gate off) answers anyway.
-        if (settings.abstentionEnabled() && !hasConfidentContext(context, retrieval.confidence())) {
+        // Gate 1: pre-generation — refuse only when retrieval is weak by BOTH measures. We avoid the
+        // re-ranked top-chunk score (a normalized blend that runs high even for off-topic queries) and
+        // instead combine two honest signals: raw-cosine vector confidence and IDF-weighted lexical
+        // (keyword) coverage. Either being strong means we found something; only when both are weak do
+        // we abstain. This both refuses adversarial out-of-corpus questions and avoids over-refusing
+        // answerable questions that happen to be phrased without the framework name.
+        if (settings.abstentionEnabled()
+                && !hasConfidentContext(context, retrieval.confidence(), retrieval.lexicalConfidence())) {
             return abstain(question);
         }
 
@@ -73,9 +75,14 @@ public class AnswerGenerator {
                 extractCitations(text, context), llm.name());
     }
 
-    /** True if we retrieved anything and the raw-cosine confidence clears the retrieval gate. */
-    private boolean hasConfidentContext(List<RetrievedChunk> context, double confidence) {
-        return !context.isEmpty() && confidence >= settings.minRetrievalScore();
+    /** True if we retrieved anything and either confidence signal clears its gate. */
+    private boolean hasConfidentContext(List<RetrievedChunk> context, double confidence,
+                                        double lexicalConfidence) {
+        if (context.isEmpty()) {
+            return false;
+        }
+        return confidence >= settings.minRetrievalScore()
+                || lexicalConfidence >= settings.minLexicalConfidence();
     }
 
     private Answer abstain(String question) {
